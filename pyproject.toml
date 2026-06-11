@@ -4,20 +4,19 @@ build-backend = "hatchling.build"
 
 [project]
 name = "record-pruner"
-version = "0.1.0"
+version = "0.2.0"
 description = "録画ファイル群を整理するスクリプト集"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "rich>=13.0.0",
+    "python-dotenv>=1.0.0",
 ]
 
 [project.scripts]
 fix-split-filenames = "scripts.fix_split_filenames:main"
+recover-filenames = "scripts.recover_filenames:main"
 
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/lib", "src/scripts"]
-
-
-
