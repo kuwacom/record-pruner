@@ -302,11 +302,11 @@ def build_filename(pattern: str, info: ProgramInfo) -> str:
     max_iterations = 20
     for _ in range(max_iterations):
         # Trマクロ: $Tr/search/replace/(arg)$
-        tr_match = re.search(r"\$Tr/", result)
-        if tr_match:
-            arg_paren = result.find("(", tr_match.end())
+        tr_idx = result.find("$Tr/")
+        if tr_idx != -1:
+            arg_paren = result.find("(", tr_idx + 4)
             if arg_paren != -1:
-                spec = result[tr_match.end():arg_paren]
+                spec = result[tr_idx + 4:arg_paren]
                 parts = [p for p in spec.split("/") if p]
                 if len(parts) >= 2 and len(parts) % 2 == 0:
                     pairs = [(parts[i], parts[i + 1]) for i in range(0, len(parts), 2)]
@@ -314,15 +314,15 @@ def build_filename(pattern: str, info: ProgramInfo) -> str:
                     if func_end != -1:
                         arg_val = evaluate_arg(result[arg_paren + 1:func_end - 1])
                         replaced = _apply_tr(arg_val, pairs)
-                        result = result[:tr_match.start()] + replaced + result[func_end + 1:]
+                        result = result[:tr_idx] + replaced + result[func_end + 1:]
                         continue
 
         # Sマクロ: $S/regex/replace/(arg)$
-        s_match = re.search(r"\$S/", result)
-        if s_match:
-            arg_paren = result.find("(", s_match.end())
+        s_idx = result.find("$S/")
+        if s_idx != -1:
+            arg_paren = result.find("(", s_idx + 3)
             if arg_paren != -1:
-                spec = result[s_match.end():arg_paren]
+                spec = result[s_idx + 3:arg_paren]
                 parts = [p for p in spec.split("/") if p]
                 if len(parts) >= 2 and len(parts) % 2 == 0:
                     pairs = [(parts[i], parts[i + 1]) for i in range(0, len(parts), 2)]
@@ -330,7 +330,7 @@ def build_filename(pattern: str, info: ProgramInfo) -> str:
                     if func_end != -1:
                         arg_val = evaluate_arg(result[arg_paren + 1:func_end - 1])
                         replaced = _apply_s(arg_val, pairs)
-                        result = result[:s_match.start()] + replaced + result[func_end + 1:]
+                        result = result[:s_idx] + replaced + result[func_end + 1:]
                         continue
 
         func_start = re.search(r"\$(ZtoH|HtoZ|Head\d+)\(", result)
@@ -365,6 +365,27 @@ def find_metadata_file(ts_path: Path) -> Optional[Path]:
         ts_path.parent / (ts_path.stem + ".program.txt"),
         ts_path.parent / (ts_path.stem + ".TXT"),
         ts_path.with_suffix(".TXT"),
+    ]
+    seen = set()
+    for c in candidates:
+        if c not in seen:
+            seen.add(c)
+            if c.exists():
+                return c
+    return None
+
+
+def find_err_file(ts_path: Path) -> Optional[Path]:
+    """
+    TSファイルに対応するERRファイルを探索する
+
+    @param ts_path - TSファイルのパス
+    @returns ERRファイルのパス（見つからなければNone）
+    """
+    candidates = [
+        ts_path.with_suffix(".ts.err"),
+        ts_path.with_suffix(".err"),
+        ts_path.parent / (ts_path.stem + ".err"),
     ]
     seen = set()
     for c in candidates:

@@ -17,6 +17,8 @@ dependencies = [
 fix-split-filenames = "scripts.fix_split_filenames:main"
 recover-filenames = "scripts.recover_filenames:main"
 
+rename-with-macro = "scripts.rename_with_macro:main"
+
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/lib", "src/scripts"]
