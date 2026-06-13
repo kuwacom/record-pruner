@@ -28,6 +28,8 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.progress import BarColumn, Progress, SpinnerColumn, TaskProgressColumn, TextColumn
 from rich.table import Table
+from rich.live import Live
+from rich.text import Text
 
 from lib.edcb import (
     BrokenFileInfo,
@@ -219,16 +221,25 @@ def main() -> int:
 
     results: List[FileResult] = []
 
-    with Progress(
+    status_text = Text("準備完了", style="cyan")
+
+    progress = Progress(
         SpinnerColumn(),
         TextColumn("[progress.description]{task.description}"),
         BarColumn(),
         TaskProgressColumn(),
         console=console,
-    ) as progress:
+    )
+
+    layout = Table.grid(expand=True)
+    layout.add_row(status_text)
+    layout.add_row(progress)
+
+    with Live(layout, console=console, refresh_per_second=4):
         task = progress.add_task("ファイル処理中...", total=len(ts_files))
 
         for ts_info in ts_files:
+            status_text.plain = f"→ {ts_info.path.name}"
             txt_info, err_info = matched_files.get(ts_info.path, (None, None))
             
             if txt_info is None or txt_info.program_info is None:
