@@ -7,6 +7,7 @@ RecName_Macro.dll 互換のマクロ変数をサポート
 """
 
 import re
+from lib.file_io import read_text_file, read_text_file_auto
 import unicodedata
 from dataclasses import dataclass
 from datetime import datetime, timedelta
@@ -449,7 +450,7 @@ def scan_broken_files(target_dir: Path, max_filename_length: Optional[int] = 10)
             ))
         elif ext == ".TXT":
             try:
-                content = file_path.read_text(encoding="utf-8")
+                content, _ = read_text_file_auto(file_path)
                 program_info = parse_program_txt(content)
                 service_id = program_info.sid if program_info else None
             except Exception:
@@ -465,7 +466,7 @@ def scan_broken_files(target_dir: Path, max_filename_length: Optional[int] = 10)
             ))
         elif ext == ".ERR":
             try:
-                content = file_path.read_text(encoding="utf-8")
+                content, _ = read_text_file_auto(file_path)
                 service_id = parse_err_service_id(content)
             except Exception:
                 service_id = None
@@ -533,3 +534,5 @@ def match_files_by_time_and_service(
         result[ts_info.path] = (matched_txt, matched_err)
     
     return result
+
+

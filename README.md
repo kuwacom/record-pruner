@@ -22,6 +22,7 @@ uv sync
 |-------------|------|
 | `fix-split-filenames` | フォルダ誤分割された録画ファイルを結合して元のファイル名に復元する |
 | `recover-filenames` | EDCB 出力バグで壊れたファイル名をメタデータから復旧する |
+| `rename-with-macro` | 既存の録画ファイルを別のマクロパターンで一括リネームする |
 
 ---
 
@@ -128,6 +129,7 @@ Write_Default.so / RecName_Macro.so と同じ形式で命名できる
 | `--escape-with` | - | `"_"` | Windows 禁止文字のエスケープ文字 |
 | `--keep-metadata` | - | `true` | メタデータファイルも付け替える |
 | `--no-keep-metadata` | - | - | メタデータファイルは元のまま |
+| `--output-encoding` | - | `utf-8-sig` | 出力ファイルのエンコーディング（デフォルト: BOM付きUTF-8） |
 
 ### .env 設定
 
@@ -170,6 +172,11 @@ uv run recover-filenames -t "F:\anime\2025年-夏" --filename-pattern "~[0-9A-Z]
 
 # メタデータファイルは元のままにする
 uv run recover-filenames -t "F:\anime\2025年-夏" --no-keep-metadata
+
+# 入力エンコーディングは自動検出されます
+
+# UTF-8（BOMなし）で出力する場合
+uv run recover-filenames -t "F:\anime\2025年-夏" --output-encoding utf-8
 ```
 
 ### 処理の流れ
@@ -182,6 +189,47 @@ uv run recover-filenames -t "F:\anime\2025年-夏" --no-keep-metadata
 6. Windows 禁止文字が含まれる場合はエスケープ
 7. ファイルをリネーム
 8. オプションに応じてメタデータファイルも付け替え
+
+---
+
+## rename-with-macro
+
+正常なファイル名のTSファイルに対して、隣接する `.program.txt` メタデータから番組情報を読み取り、指定されたマクロパターンで新しいファイル名に変換する
+
+### 機能
+
+- `.program.txt` メタデータから番組情報を自動抽出
+- RecName_Macro.so 互換のマクロ変数でファイル名パターンを指定可能
+- `.env` ファイルで設定を使い回せる（引数との同時設定時は引数が優先）
+- メタデータファイルも新しいファイル名に付け替え可能
+- dry-run モードで事前確認が可能
+
+### オプション一覧
+
+| オプション | 短縮形 | デフォルト | 説明 |
+|-----------|--------|-----------|------|
+| `--target-dir` | `-t` | `.env` または必須 | 対象ディレクトリのパス |
+| `--dry-run` | `-n` | `false` | 実際にリネームせずシミュレーションのみ実行 |
+| `--macro-pattern` | - | 必須 | 出力ファイル名のマクロパターン |
+| `--escape-with` | - | `"_"` | Windows 禁止文字のエスケープ文字 |
+| `--keep-metadata` | - | `true` | メタデータファイルも付け替える |
+| `--no-keep-metadata` | - | - | メタデータファイルは元のまま |
+| `--output-encoding` | - | `utf-8-sig` | 出力ファイルのエンコーディング（デフォルト: BOM付きUTF-8） |
+
+### 使用例
+
+```bash
+# dry-run で確認（必ず最初に実行することを推奨）
+uv run rename-with-macro -t "F:\anime\2025年-夏" --macro-pattern "$SDYYYY$-$SDMM$-$SDDD$_$STHH$-$STMM$_$ServiceName$-$EventName$.ts" --dry-run
+
+# 実際に実行
+uv run rename-with-macro -t "F:\anime\2025年-夏" --macro-pattern "$SDYYYY$-$SDMM$-$SDDD$_$STHH$-$STMM$_$ServiceName$-$EventName$.ts"
+
+# 全角文字を半角に変換
+uv run rename-with-macro -t "F:\anime\2025年-夏" --macro-pattern "$SDYYYY$-$SDMM$-$SDDD$_$STHH$-$STMM$_$ZtoH(ServiceName)$-$ZtoH(Title)$.ts"
+
+# 入力エンコーディングは自動検出されます
+```
 
 ---
 
@@ -214,3 +262,16 @@ EDCB の設定で「番組情報をファイルに出力する」が有効にな
 
 `.env` ファイルがプロジェクトルートに配置されているか確認してください
 引数と同時に設定した場合、引数が優先されます
+
+### 文字コードが変わってしまう
+
+デフォルトでは BOM付きUTF-8（`utf-8-sig`）で読み書きを行います
+元のファイルと異なるエンコーディングの場合は `--encoding` オプションで指定してください
+
+```bash
+# 入力エンコーディングは自動検出されます
+
+# UTF-8（BOMなし）で出力する場合
+uv run recover-filenames -t "F:\anime\2025年-夏" --output-encoding utf-8
+```
+

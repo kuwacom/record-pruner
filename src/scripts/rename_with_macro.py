@@ -24,6 +24,7 @@ from rich.panel import Panel
 from rich.progress import BarColumn, Progress, SpinnerColumn, TaskProgressColumn, TextColumn
 from rich.table import Table
 
+from lib.file_io import read_text_file_auto
 from lib.edcb import (
     build_filename,
     find_err_file,
@@ -118,6 +119,11 @@ def main() -> int:
         default=10,
         help="壊れたファイル名と判定する最大長さ（拡張子除く）。デフォルト10文字。0または負の値で無制限",
     )
+    parser.add_argument(
+        "--output-encoding",
+        default="utf-8-sig",
+        help="出力ファイルのエンコーディング（デフォルト: utf-8-sig = BOM付きUTF-8）",
+    )
 
     args = parser.parse_args()
     console = Console()
@@ -166,6 +172,8 @@ def main() -> int:
     elif env_config.get("max_filename_length") is not None and args.max_filename_length == 10:
         max_filename_length = env_config["max_filename_length"]
 
+    output_encoding = args.output_encoding
+
     # 対象ファイルをスキャン（正常なファイル名のみ）
     console.print("[bold]対象ファイルをスキャン中...[/bold]")
     ts_files = sorted([
@@ -193,7 +201,6 @@ def main() -> int:
         info_lines.append("[bold yellow]※ dry-run モード: 実際にはリネームしません[/bold yellow]")
     console.print(Panel("\n".join(info_lines), title="処理概要", border_style="blue"))
 
-    results: List[FileResult] = []
     results: List[FileResult] = []
 
     status_text = Text("準備完了", style="cyan")
@@ -228,7 +235,7 @@ def main() -> int:
                 continue
 
             try:
-                content = txt_path.read_text(encoding="utf-8")
+                content, _ = read_text_file_auto(txt_path)
                 program_info = parse_program_txt(content)
             except Exception as e:
                 results.append(FileResult(
@@ -393,3 +400,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
+

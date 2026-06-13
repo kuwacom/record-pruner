@@ -138,6 +138,11 @@ def main() -> int:
         default=10,
         help="入力ファイル名の最大長さ（拡張子除く）。デフォルト10文字。0または負の値で無制限",
     )
+    parser.add_argument(
+        "--output-encoding",
+        default="utf-8-sig",
+        help="出力ファイルのエンコーディング（デフォルト: utf-8-sig = BOM付きUTF-8）",
+    )
 
     args = parser.parse_args()
     console = Console()
@@ -187,6 +192,8 @@ def main() -> int:
         max_filename_length = None
     elif env_config.get("max_filename_length") is not None and args.max_filename_length == 10:
         max_filename_length = env_config["max_filename_length"]
+
+    output_encoding = args.output_encoding
 
     # 壊れたファイルをスキャン
     console.print("[bold]壊れたファイルをスキャン中...[/bold]")
@@ -380,3 +387,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
+
