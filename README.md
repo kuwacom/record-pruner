@@ -24,6 +24,7 @@ uv sync
 | `recover-filenames` | EDCB 出力バグで壊れたファイル名をメタデータから復旧する |
 | `rename-with-macro` | 既存の録画ファイルを別のマクロパターンで一括リネームする |
 | `convert-encoding` | 既存ファイル群のエンコーディングを統一する |
+| `prune-duplicates` | 複数チャンネル録画の重複を .err の Drop 率で整理する |
 
 ---
 
@@ -276,6 +277,56 @@ uv run convert-encoding -t "F:\anime" --pattern "*.program.txt" --recursive
 
 ---
 
+---
+
+## prune-duplicates
+
+複数チャンネルで録画された同一番組の重複候補を、番組名の類似度と話数情報からまとめ、各録画に対応する `.err` の Drop 率が最も低いものを残して、それ以外を移動または削除する
+
+デフォルトは `move` で、移動時は先にコピーを行い、サイズと SHA-256 を照合して整合性を確認できた場合のみ元ファイルを削除する
+
+### 機能
+
+- 正常な `.ts` ファイルを走査して重複候補グループを抽出
+- `.program.txt` があれば番組名と局名を優先利用
+- `.err` の PID 集計から Drop 数と Drop 率を算出
+- Drop 率が最も低い録画を保持し、それ以外を `move` または `delete`
+- `.program.txt` / `.err` などの隣接ファイルもまとめて処理
+- dry-run モードで事前確認が可能
+- `.err` が不足しているグループは安全のため保留
+
+### オプション一覧
+
+| オプション | 短縮形 | デフォルト | 説明 |
+|-----------|--------|-----------|------|
+| `--target-dir` | `-t` | `.env` または必須 | 対象ディレクトリのパス |
+| `--dry-run` | `-n` | `false` | 実際に変更せずシミュレーションのみ実行 |
+| `--destination-dir` | - | `<target-dir>/_duplicates` | `move` 時の移動先ディレクトリ |
+| `--action` | - | `move` | `move` または `delete` |
+| `--min-similarity` | - | `0.78` | シリーズ名類似度の下限 |
+| `--max-days-apart` | - | `14` | 同一番組候補とみなす放送日の最大差 |
+
+### 使用例
+
+```bash
+# dry-run で候補を確認
+uv run prune-duplicates -t "F:\anime\2025年-夏" --dry-run
+
+# 重複を安全に別フォルダへ退避
+uv run prune-duplicates -t "F:\anime\2025年-夏" --destination-dir "F:\anime\duplicates"
+
+# 削除モードで確認
+uv run prune-duplicates -t "F:\anime\2025年-夏" --action delete --dry-run
+```
+
+### 処理の流れ
+
+1. 対象ディレクトリ内の `.ts` を走査する
+2. ファイル名と `.program.txt` から番組名・局名・話数を抽出する
+3. 類似タイトルと話数を使って重複候補をグループ化する
+4. 各グループの `.err` から Drop 率を比較して保持対象を決める
+5. 残りを `move` または `delete` する
+6. `move` 時はコピー後にサイズと SHA-256 を照合し、問題なければ元を削除する
 ## プロジェクト構成
 
 ```
