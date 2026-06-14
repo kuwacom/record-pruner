@@ -4,6 +4,7 @@
 エンコーディング自動検出・BOM対応をサポート
 """
 
+import os
 from pathlib import Path
 
 
@@ -81,3 +82,42 @@ def write_text_file(path: Path, content: str, encoding: str = "utf-8-sig") -> No
     デフォルトは utf-8-sig（BOM付きUTF-8で書き込み）
     """
     path.write_text(content, encoding=encoding)
+
+
+def write_text_file_preserve_timestamp(path: Path, content: str, encoding: str = "utf-8-sig") -> None:
+    """
+    テキストファイルを書き込み、タイムスタンプ（作成日・更新日）を保持する
+    """
+    # 現在のタイムスタンプを保存
+    stat = path.stat()
+    mtime = stat.st_mtime
+    atime = stat.st_atime
+    ctime = getattr(stat, "st_ctime", None)
+
+    # ファイルを書き込み
+    path.write_text(content, encoding=encoding)
+
+    # タイムスタンプを復元
+    if os.name == "nt" and ctime is not None:
+        # Windows: 作成時刻も含めて復元
+        import ctypes
+        from ctypes import wintypes
+
+        def _to_filetime(unix_time: float) -> wintypes.FILETIME:
+            timestamp = int((unix_time + 11644473600) * 10000000)
+            return wintypes.FILETIME(timestamp & 0xFFFFFFFF, timestamp >> 32)
+
+        handle = ctypes.windll.kernel32.CreateFileW(
+            str(path), 0x100, 0, None, 3, 0x80, None
+        )
+        if handle != -1:
+            ctime_ft = _to_filetime(ctime)
+            mtime_ft = _to_filetime(mtime)
+            atime_ft = _to_filetime(atime)
+            ctypes.windll.kernel32.SetFileTime(
+                handle, ctypes.byref(ctime_ft), ctypes.byref(atime_ft), ctypes.byref(mtime_ft)
+            )
+            ctypes.windll.kernel32.CloseHandle(handle)
+    else:
+        os.utime(path, (atime, mtime))
+

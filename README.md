@@ -23,6 +23,7 @@ uv sync
 | `fix-split-filenames` | フォルダ誤分割された録画ファイルを結合して元のファイル名に復元する |
 | `recover-filenames` | EDCB 出力バグで壊れたファイル名をメタデータから復旧する |
 | `rename-with-macro` | 既存の録画ファイルを別のマクロパターンで一括リネームする |
+| `convert-encoding` | 既存ファイル群のエンコーディングを統一する |
 
 ---
 
@@ -233,6 +234,48 @@ uv run rename-with-macro -t "F:\anime\2025年-夏" --macro-pattern "$SDYYYY$-$SD
 
 ---
 
+## convert-encoding
+
+指定したパターンにマッチするファイルを検索し、エンコーディングが目標と異なる場合は変換して書き戻す
+
+### 機能
+
+- ファイルパターンで対象ファイルを検索（glob対応）
+- エンコーディングを自動検出（BOM付きUTF-8 / UTF-8 / Shift-JIS / CP932）
+- 目標エンコーディングと異なるファイルのみ変換
+- 既に正しいエンコーディングのファイルはスキップ
+- サブディレクトリも検索可能
+- dry-run モードで事前確認が可能
+
+### オプション一覧
+
+| オプション | 短縮形 | デフォルト | 説明 |
+|-----------|--------|-----------|------|
+| `--target-dir` | `-t` | 必須 | 対象ディレクトリのパス |
+| `--dry-run` | `-n` | `false` | 実際に変換せずシミュレーションのみ実行 |
+| `--pattern` | - | `*.txt` | 対象ファイルのパターン（glob形式） |
+| `--to-encoding` | - | `utf-8-sig` | 目標エンコーディング |
+| `--recursive` | `-r` | `false` | サブディレクトリも検索する |
+| `--force` | - | `false` | エンコーディングが同じでも強制的に書き換える |
+
+### 使用例
+
+```bash
+# .program.txt ファイルを BOM付きUTF-8 に統一（dry-run）
+uv run convert-encoding -t "F:\anime\2025年-夏" --pattern "*.program.txt" --dry-run
+
+# 実際に変換
+uv run convert-encoding -t "F:\anime\2025年-夏" --pattern "*.program.txt"
+
+# 全ての .txt ファイルを UTF-8（BOMなし）に変換
+uv run convert-encoding -t "F:\anime\2025年-夏" --pattern "*.txt" --to-encoding utf-8
+
+# サブディレクトリも含めて変換
+uv run convert-encoding -t "F:\anime" --pattern "*.program.txt" --recursive
+```
+
+---
+
 ## プロジェクト構成
 
 ```
@@ -274,4 +317,5 @@ EDCB の設定で「番組情報をファイルに出力する」が有効にな
 # UTF-8（BOMなし）で出力する場合
 uv run recover-filenames -t "F:\anime\2025年-夏" --output-encoding utf-8
 ```
+
 
